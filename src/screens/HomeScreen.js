@@ -7,7 +7,9 @@ import { Text } from 'react-native-paper';
 
 const Tab = createMaterialTopTabNavigator();
 
-const HomeScreen = () => {
+const HomeScreen = ({ route, navigation }) => {
+  const { videos, audios } = route.params;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -23,8 +25,14 @@ const HomeScreen = () => {
           tabBarStyle: { backgroundColor: '#6200ee' },
         }}
       >
-        <Tab.Screen name="Videos" component={VideoTab} />
-        <Tab.Screen name="Music" component={AudioTab} />
+        <Tab.Screen
+          name="Videos"
+          children={() => <VideoTab videos={videos} navigation={navigation} />}
+        />
+        <Tab.Screen
+          name="Music"
+          children={() => <AudioTab audios={audios} navigation={navigation} />}
+        />
       </Tab.Navigator>
     </SafeAreaView>
   );
