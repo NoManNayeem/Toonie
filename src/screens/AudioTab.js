@@ -32,7 +32,7 @@ const AudioTab = ({ audios, navigation, setNowPlaying }) => {
           {/* Song Details */}
           <View style={styles.textContainer}>
             <Text style={[styles.songName, { color: theme.colors.text }]}>{getFileNameFromUri(item.uri)}</Text>
-            <Text style={[styles.artistName, { color: theme.colors.disabled }]}>Unknown Artist</Text> {/* Placeholder for artist */}
+            <Text style={[styles.artistName, { color: theme.colors.disabled }]}>Unknown Artist</Text>
           </View>
         </Card.Content>
       </Card>
