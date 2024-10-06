@@ -1,27 +1,28 @@
 import React, { useState } from 'react';
-import { View, Button, Alert } from 'react-native';
+import { View, Alert, StyleSheet } from 'react-native';
+import { FAB } from 'react-native-paper'; // Floating Action Button
 import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 
 const DownloadMediaScreen = () => {
   const [permissionGranted, setPermissionGranted] = useState(false);
 
-  // Sample video and audio URLs with realistic sources
+  // Sample video and audio URLs
   const videoUrls = [
-    'https://samplelib.com/lib/preview/mp4/sample-30s.mp4', // 30-second video
-    'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4', // Big Buck Bunny
-    'https://sample-videos.com/video123/mp4/720/sample_640x360.mp4', // 640x360 sample
-    'https://filesamples.com/samples/video/mp4/sample_960x540.mp4', // Sample video 960x540
-    'https://filesamples.com/samples/video/mp4/sample_1280x720.mp4', // 720p video sample
+    'https://samplelib.com/lib/preview/mp4/sample-30s.mp4', 
+    'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4',
+    'https://sample-videos.com/video123/mp4/720/sample_640x360.mp4', 
+    'https://filesamples.com/samples/video/mp4/sample_960x540.mp4',
+    'https://filesamples.com/samples/video/mp4/sample_1280x720.mp4'
   ];
 
   const audioUrls = [
-    'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', // SoundHelix sample 1
-    'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', // SoundHelix sample 2
-    'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', // SoundHelix sample 3
-    'https://filesamples.com/samples/audio/mp3/sample1.mp3', // MP3 sample 1
-    'https://filesamples.com/samples/audio/mp3/sample2.mp3', // MP3 sample 2
-    'https://filesamples.com/samples/audio/mp3/sample3.mp3', // MP3 sample 3
+    'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+    'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+    'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+    'https://filesamples.com/samples/audio/mp3/sample1.mp3',
+    'https://filesamples.com/samples/audio/mp3/sample2.mp3',
+    'https://filesamples.com/samples/audio/mp3/sample3.mp3'
   ];
 
   // Request permission to write to media library
@@ -74,11 +75,35 @@ const DownloadMediaScreen = () => {
   };
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Button title="Request Permission" onPress={requestPermission} />
-      <Button title="Download Sample Media" onPress={handleDownload} />
+    <View style={styles.container}>
+      <FAB
+        style={styles.fab}
+        small
+        icon="download"
+        label="Download Media"
+        onPress={() => {
+          if (!permissionGranted) {
+            requestPermission();
+          } else {
+            handleDownload();
+          }
+        }}
+      />
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#6200ee', // Customize button color
+  },
+});
 
 export default DownloadMediaScreen;

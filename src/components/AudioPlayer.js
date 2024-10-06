@@ -1,119 +1,159 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, Alert } from 'react-native';
-import { Audio } from 'expo-av';
-import { IconButton } from 'react-native-paper';
-import Slider from '@react-native-community/slider';
+import { View, StyleSheet, Alert } from 'react-native';
+import SoundPlayer from 'react-native-sound-player'; // For audio playback
+import { IconButton, Slider, ProgressBar, Avatar, Text, useTheme } from 'react-native-paper';
+
+// Helper function to extract filename from URI
+const getFileNameFromUri = (uri) => {
+  return uri?.split('/').pop() || 'Unknown';
+};
 
 const AudioPlayer = ({ route }) => {
   const { audioUri } = route.params;
-  const [sound, setSound] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const [volume, setVolume] = useState(1.0);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isShuffle, setIsShuffle] = useState(false); // Shuffle mode
+  const [isRepeat, setIsRepeat] = useState(false);   // Repeat mode
+  const theme = useTheme(); // Get current theme for dynamic styles
 
   useEffect(() => {
-    async function loadAudio() {
+    const loadAudio = async () => {
       try {
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: audioUri },
-          { shouldPlay: true }
-        );
-        setSound(newSound);
+        SoundPlayer.playUrl(audioUri); // Start playing audio
         setIsPlaying(true);
 
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded) {
-            setPosition(status.positionMillis);
-            setDuration(status.durationMillis);
-            setIsPlaying(status.isPlaying);
-          }
-        });
+        const info = await SoundPlayer.getInfo();
+        setDuration(info.duration); // Set duration of the audio file
       } catch (error) {
         Alert.alert('Error', 'Failed to load the audio file.');
-        console.error('Audio loading error:', error);
       }
-    }
+    };
 
     loadAudio();
 
     return () => {
-      if (sound) {
-        sound.unloadAsync();
-      }
+      SoundPlayer.stop(); // Stop playing audio when the component unmounts
     };
   }, [audioUri]);
 
-  const handlePlayPause = async () => {
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const info = await SoundPlayer.getInfo();
+        setPosition(info.currentTime); // Update position as the audio plays
+      } catch (error) {
+        console.error('Error getting audio info:', error);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval); // Clear interval on unmount
+  }, []);
+
+  const handlePlayPause = () => {
     try {
       if (isPlaying) {
-        await sound.pauseAsync();
+        SoundPlayer.pause(); // Pause the audio
       } else {
-        await sound.playAsync();
+        SoundPlayer.resume(); // Resume the audio
       }
       setIsPlaying(!isPlaying);
     } catch (error) {
-      Alert.alert('Error', 'An error occurred while trying to play/pause the audio.');
-      console.error('Audio play/pause error:', error);
+      Alert.alert('Error', 'An error occurred while toggling play/pause.');
     }
   };
 
-  const handleVolumeChange = async (newVolume) => {
-    try {
-      setVolume(newVolume);
-      await sound.setVolumeAsync(newVolume);
-    } catch (error) {
-      Alert.alert('Error', 'An error occurred while trying to adjust the volume.');
-      console.error('Volume change error:', error);
-    }
+  const handleShuffleToggle = () => {
+    setIsShuffle(!isShuffle); // Toggle shuffle mode
   };
 
-  const handleSliderChange = async (value) => {
-    try {
-      await sound.setPositionAsync(value);
-      setPosition(value);
-    } catch (error) {
-      Alert.alert('Error', 'An error occurred while trying to change the track position.');
-      console.error('Position change error:', error);
-    }
+  const handleRepeatToggle = () => {
+    setIsRepeat(!isRepeat); // Toggle repeat mode
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.trackTitle}>{audioUri.split('/').pop()}</Text>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* Album Art or Placeholder */}
+      <Avatar.Icon size={120} icon="music" color="white" style={[styles.avatar, { backgroundColor: theme.colors.primary }]} />
+      {/* Track Info */}
+      <Text style={[styles.trackTitle, { color: theme.colors.text }]}>
+        {getFileNameFromUri(audioUri)}
+      </Text>
+      <Text style={[styles.artistName, { color: theme.colors.text }]}>
+        Unknown Artist
+      </Text>
+
+      {/* Progress Bar */}
+      <ProgressBar progress={position / duration} color={theme.colors.primary} style={styles.progressBar} />
+
       <View style={styles.controls}>
+        {/* Shuffle */}
+        <IconButton
+          icon="shuffle"
+          size={30}
+          color={isShuffle ? theme.colors.primary : theme.colors.disabled}
+          onPress={handleShuffleToggle}
+        />
+        {/* Play/Pause */}
         <IconButton
           icon={isPlaying ? 'pause' : 'play'}
-          size={30}
+          size={40}
+          color={theme.colors.primary}
           onPress={handlePlayPause}
         />
-        <Slider
-          style={styles.slider}
-          minimumValue={0}
-          maximumValue={duration}
-          value={position}
-          onSlidingComplete={handleSliderChange}
-          minimumTrackTintColor="#6200ee"
-          maximumTrackTintColor="#999"
+        {/* Repeat */}
+        <IconButton
+          icon="repeat"
+          size={30}
+          color={isRepeat ? theme.colors.primary : theme.colors.disabled}
+          onPress={handleRepeatToggle}
         />
+      </View>
+
+      {/* Seek Bar */}
+      <Slider
+        style={styles.slider}
+        minimumValue={0}
+        maximumValue={duration}
+        value={position}
+        onSlidingComplete={(value) => {
+          try {
+            SoundPlayer.seek(value); // Seek to position in audio
+          } catch (error) {
+            Alert.alert('Error', 'Failed to seek the audio file.');
+          }
+        }}
+        minimumTrackTintColor={theme.colors.primary}
+        maximumTrackTintColor={theme.colors.disabled}
+      />
+
+      {/* Volume Control */}
+      <View style={styles.volumeControl}>
         <IconButton
           icon={volume > 0 ? 'volume-high' : 'volume-off'}
           size={30}
-          onPress={() => handleVolumeChange(volume > 0 ? 0 : 1)}
+          color={theme.colors.primary}
+          onPress={() => setVolume(volume > 0 ? 0 : 1)} // Mute/Unmute audio
+        />
+        <Slider
+          style={styles.volumeSlider}
+          minimumValue={0}
+          maximumValue={1}
+          value={volume}
+          onValueChange={(newVolume) => {
+            setVolume(newVolume);
+            SoundPlayer.setVolume(newVolume); // Adjust volume
+          }}
+          minimumTrackTintColor={theme.colors.primary}
+          maximumTrackTintColor={theme.colors.disabled}
         />
       </View>
-      <Text style={styles.time}>
-        {new Date(position).toISOString().substr(11, 8)} / {new Date(duration).toISOString().substr(11, 8)}
+
+      {/* Time Display */}
+      <Text style={[styles.time, { color: theme.colors.text }]}>
+        {new Date(position * 1000).toISOString().substr(14, 5)} / {new Date(duration * 1000).toISOString().substr(14, 5)}
       </Text>
-      <Slider
-        style={styles.volumeSlider}
-        minimumValue={0}
-        maximumValue={1}
-        value={volume}
-        onValueChange={handleVolumeChange}
-        minimumTrackTintColor="#6200ee"
-        maximumTrackTintColor="#999"
-      />
     </View>
   );
 };
@@ -123,32 +163,48 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
     padding: 20,
   },
+  avatar: {
+    marginBottom: 20,
+  },
   trackTitle: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
+    marginBottom: 5,
+    textAlign: 'center',
+  },
+  artistName: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: 'center',
   },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginVertical: 20,
+  },
+  progressBar: {
+    width: '100%',
+    height: 5,
     marginVertical: 10,
   },
   slider: {
+    width: '100%',
+    marginVertical: 10,
+  },
+  volumeControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+  },
+  volumeSlider: {
     flex: 1,
-    marginHorizontal: 10,
+    marginLeft: 10,
   },
   time: {
     fontSize: 14,
-    color: '#333',
     marginTop: 10,
-  },
-  volumeSlider: {
-    width: '80%',
-    marginTop: 20,
   },
 });
 
